@@ -3,16 +3,21 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Product;
+use App\Services\TransactionService;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
 
 class TransactionController extends Controller
 {
+    protected $transactionService;
+
+    public function __construct(TransactionService $transactionService)
+    {
+        $this->transactionService = $transactionService;
+    }
+
     public function checkout(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
@@ -25,42 +30,11 @@ class TransactionController extends Controller
             return response()->json($validator->errors(), 422);
         }
 
-        DB::beginTransaction();
-
         try {
-            $totalPrice = 0;
-            $detailsToInsert = [];
-
-            foreach ($request->items as $item) {
-                $product = Product::lockForUpdate()->find($item['product_id']);
-
-                if ($product->stock < $item['kuantitas']) {
-                    throw new \Exception("Stok untuk produk '{$product->name}' tidak mencukupi. Sisa: {$product->stock}");
-                }
- 
-                $subtotal = $product->price * $item['kuantitas'];
-                $totalPrice += $subtotal;
-
-                $product->decrement('stock', $item['kuantitas']);
-
-                $detailsToInsert[] = [
-                    'product_id' => $product->id,
-                    'kuantitas' => $item['kuantitas'],
-                    'subtotal' => $subtotal,
-                ];
-            }
-
-            $transaction = Transaction::create([
-                'user_id' => auth()->id(),
-                'invoice_number' => 'INV-' . date('Ymd') . '-' . strtoupper(Str::random(5)),
-                'total_price' => $totalPrice,
-            ]);
-
-            $transaction->details()->createMany($detailsToInsert);
-
-            DB::commit();
-
-            $transaction->load('details.product', 'user');
+            $transaction = $this->transactionService->processCheckout(
+                $request->items, 
+                auth()->id()
+            );
 
             return response()->json([
                 'success' => true,
@@ -69,8 +43,6 @@ class TransactionController extends Controller
             ], 201);
 
         } catch (\Exception $e) {
-            DB::rollBack();
-
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage()
