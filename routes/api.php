@@ -1,14 +1,16 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\CategoryController;
-use App\Http\Controllers\Api\ProductController;
-use App\Http\Controllers\Api\TransactionController;
+use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\TransactionController;
 
+// --- ROUTE PUBLIK ---
 Route::post('/register', [AuthController::class, 'register']); // <-- PASTIKAN INI ADA
 Route::post('/login', [AuthController::class, 'login']);
--
+
+// --- ROUTE PRIVAT (Butuh Token) ---
 Route::middleware('auth:api')->group(function () {
     Route::post('/logout', [AuthController::class, 'logout']);
     

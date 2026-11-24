@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api;
+namespace App\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
@@ -61,7 +61,7 @@ class AuthController extends Controller
             'success' => true,
             'message' => 'Login Berhasil',
             'user' => auth()->guard('api')->user(),
-            'token' => $token // <-- Ini gelang VIP-nya
+            'token' => $token //
         ], 200);
     }
 
